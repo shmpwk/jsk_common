@@ -148,6 +148,7 @@ class DataCollectionServer(object):
         elif method == 'timer':
             duration = rospy.Duration(1.0 / rospy.get_param('~hz', 1.0))
             self.start = False
+            self.first_stamp = False
             self.start_server = rospy.Service(
                 '~start_request', Trigger, self.start_service_cb)
             self.end_server = rospy.Service(
@@ -195,8 +196,12 @@ class DataCollectionServer(object):
 
     def start_rosbag(self):
         postfix = rospy.Time.now()
+        # todo: both for single or multiple topic
+        stamp = self.msg[self.topics[0]['name']]['stamp']
+        if not self.first_stamp:
+            self.first_stamp = stamp
         filename = os.path.join(
-            self.save_dir, 'rosbag-{0}'.format(postfix))
+            self.save_dir, str(self.first_stamp.to_nsec()), 'rosbag-{0}'.format(postfix))
         cmd_rosbag = ['rosbag', 'record']
         cmd_rosbag.extend(self.rosbag_topics)
         cmd_rosbag.extend(['--output-name', filename])
@@ -243,7 +248,9 @@ class DataCollectionServer(object):
 
     def _sync_save(self):
         stamp = self.msg[self.topics[0]['name']]['stamp']
-        save_dir = osp.join(self.save_dir, str(stamp.to_nsec()))
+        if not self.first_stamp:
+            self.first_stamp = stamp
+        save_dir = osp.join(self.save_dir, str(self.first_stamp.to_nsec()), str(stamp.to_nsec()))
         if not osp.exists(save_dir):
             os.makedirs(save_dir)
         for topic in self.topics:
@@ -267,6 +274,8 @@ class DataCollectionServer(object):
                 if topic['name'] not in self.msg:
                     continue
                 stamp = self.msg[topic['name']]['stamp']
+                if not self.first_stamp:
+                    self.first_stamp = stamp
                 if abs(now - stamp) < rospy.Duration(self.slop):
                     saving_msgs[topic['name']] = self.msg[topic['name']]['msg']
                 if now < stamp:
@@ -277,7 +286,7 @@ class DataCollectionServer(object):
             rospy.sleep(0.01)
 
         if self.timestamp_save_dir:
-            save_dir = osp.join(self.save_dir, str(now.to_nsec()))
+            save_dir = osp.join(self.save_dir, str(self.first_stamp.to_nsec()), str(now.to_nsec()))
         else:
             save_dir = self.save_dir
 
@@ -296,6 +305,7 @@ class DataCollectionServer(object):
 
     def start_service_cb(self, req):
         self.start = True
+        self.first_stamp = False
         if self.rosbag:
             self.start_rosbag()
         return TriggerResponse(success=True)
