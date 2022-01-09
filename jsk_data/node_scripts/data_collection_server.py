@@ -248,9 +248,10 @@ class DataCollectionServer(object):
 
     def _sync_save(self):
         stamp = self.msg[self.topics[0]['name']]['stamp']
+        postfix = rospy.Time.now()
         if not self.first_stamp:
             self.first_stamp = stamp
-        save_dir = osp.join(self.save_dir, str(self.first_stamp.to_nsec()), str(stamp.to_nsec()))
+        save_dir = osp.join(self.save_dir, str(self.first_stamp.to_nsec()), str(stamp.to_nsec()) + "_" + str(postfix))
         if not osp.exists(save_dir):
             os.makedirs(save_dir)
         for topic in self.topics:
@@ -285,8 +286,9 @@ class DataCollectionServer(object):
                     return False, msg
             rospy.sleep(0.01)
 
+        postfix = rospy.Time.now()
         if self.timestamp_save_dir:
-            save_dir = osp.join(self.save_dir, str(self.first_stamp.to_nsec()), str(now.to_nsec()))
+            save_dir = osp.join(self.save_dir, str(self.first_stamp.to_nsec()), str(now.to_nsec()) + "_" + str(postfix))
         else:
             save_dir = self.save_dir
 
