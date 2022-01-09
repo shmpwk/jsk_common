@@ -148,7 +148,7 @@ class DataCollectionServer(object):
         elif method == 'timer':
             duration = rospy.Duration(1.0 / rospy.get_param('~hz', 1.0))
             self.start = False
-            self.first_stamp = False
+            self.first_stamp = rospy.Time()
             self.start_server = rospy.Service(
                 '~start_request', Trigger, self.start_service_cb)
             self.end_server = rospy.Service(
@@ -305,7 +305,7 @@ class DataCollectionServer(object):
 
     def start_service_cb(self, req):
         self.start = True
-        self.first_stamp = False
+        self.first_stamp = rospy.Time()
         if self.rosbag:
             self.start_rosbag()
         return TriggerResponse(success=True)
